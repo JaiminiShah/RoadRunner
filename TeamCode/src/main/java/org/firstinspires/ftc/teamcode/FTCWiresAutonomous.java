@@ -1,49 +1,26 @@
-/* Copyright (c) 2019 FIRST. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this list
- * of conditions and the following disclaimer.
- *
- * Redistributions in binary form must reproduce the above copyright notice, this
- * list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * Neither the name of FIRST nor the names of its contributors may be used to endorse or
- * promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
- * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 package org.firstinspires.ftc.teamcode;
 
 import static com.qualcomm.robotcore.util.ElapsedTime.Resolution.SECONDS;
 
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
+import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
+import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.tfod.TfodProcessor;
 
+import java.io.BufferedInputStream;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * FTC WIRES Autonomous Example for only vision detection using tensorflow and park
@@ -51,14 +28,23 @@ import java.util.List;
 @Autonomous(name = "FTC Wires Autonomous Mode", group = "00-Autonomous", preselectTeleOp = "FTC Wires TeleOp")
 public class FTCWiresAutonomous extends LinearOpMode {
 
-    public static String TEAM_NAME = "EDIT TEAM NAME"; //TODO: Enter team Name
-    public static int TEAM_NUMBER = 0; //TODO: Enter team Number
+    private static final long READ_PERIOD =0 ;
+    public static String TEAM_NAME = "WiredWoodmen"; //TODO: Enter team Name
+    public static int TEAM_NUMBER = 8793; //TODO: Enter team Number
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     //Vision parameters
-    private TfodProcessor tfod;
-    private VisionPortal visionPortal;
+    //private TfodProcessor tfod;
+    //private VisionPortal visionPortal;
+    public HuskyLens huskyLens;
+    public String teamobject []=null;
+    public DcMotor armLift1 = null,
+    armLift2 = null;
+    public Servo clawLift1 = null,
+            clawLift2 = null,
+            claw = null;
+
 
     //Define and declare Robot Starting Locations
     public enum START_POSITION{
@@ -79,13 +65,19 @@ public class FTCWiresAutonomous extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
+        armLift1 = hardwareMap.dcMotor.get("armLift1");
+        armLift2 = hardwareMap.dcMotor.get("armLift2");
+        claw = hardwareMap.servo.get("claw");
+        clawLift1 = hardwareMap.servo.get("clawLift1");
+        clawLift2 = hardwareMap.servo.get("clawLift2");
+
         //Key Pay inputs to selecting Starting Position of robot
         selectStartingPosition();
         telemetry.addData("Selected Starting Position", startPosition);
 
         //Activate Camera Vision that uses TensorFlow for pixel detection
-        initTfod();
-
+        //initTfod();
+        initHuskylens();
         // Wait for the DS start button to be touched.
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
         telemetry.addData(">", "Touch Play to start OpMode");
@@ -96,7 +88,8 @@ public class FTCWiresAutonomous extends LinearOpMode {
             telemetry.addData("Selected Starting Position", startPosition);
 
             //Run Vuforia Tensor Flow and keep watching for the identifier in the Signal Cone.
-            runTfodTensorFlow();
+            // runTfodTensorFlow();
+            runHuskyLens();
             telemetry.addData("Vision identified Parking Location", identifiedSpikeMarkLocation);
             telemetry.update();
         }
@@ -225,6 +218,9 @@ public class FTCWiresAutonomous extends LinearOpMode {
                         .build());
 
         //TODO : Code to drop Purple Pixel on Spike Mark
+        claw.setPosition(0.5);
+        clawLift1.setPosition(-0.5);
+
         safeWaitSeconds(1);
 
         //Move robot to midwayPose1
@@ -234,7 +230,7 @@ public class FTCWiresAutonomous extends LinearOpMode {
                         .build());
 
         //For Blue Right and Red Left, intake pixel from stack
-        if (startPosition == START_POSITION.BLUE_RIGHT ||
+        /*if (startPosition == START_POSITION.BLUE_RIGHT ||
                 startPosition == START_POSITION.RED_LEFT) {
             Actions.runBlocking(
                     drive.actionBuilder(drive.pose)
@@ -250,9 +246,9 @@ public class FTCWiresAutonomous extends LinearOpMode {
                     drive.actionBuilder(drive.pose)
                             .strafeToLinearHeading(midwayPose2.position, midwayPose2.heading)
                             .build());
-        }
+        }*/
 
-        safeWaitSeconds(waitSecondsBeforeDrop);
+       // safeWaitSeconds(waitSecondsBeforeDrop);
 
         //Move robot to midwayPose2 and to dropYellowPixelPose
         Actions.runBlocking(
@@ -263,6 +259,13 @@ public class FTCWiresAutonomous extends LinearOpMode {
 
 
         //TODO : Code to drop Pixel on Backdrop
+        armLift1.setTargetPosition(300);
+        armLift2.setTargetPosition(300);
+        armLift1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armLift2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        claw.setPosition(0.7);
+        clawLift2.setPosition(0.1);
+
         safeWaitSeconds(1);
 
         //Move robot to park in Backstage
@@ -320,13 +323,60 @@ public class FTCWiresAutonomous extends LinearOpMode {
     /**
      * Initialize the TensorFlow Object Detection processor.
      */
-    private void initTfod() {
+    public void initHuskylens() {
 
-        // Create the TensorFlow processor the easy way.
-        tfod = TfodProcessor.easyCreateWithDefaults();
+        huskyLens = hardwareMap.get(HuskyLens.class, "huskylens");
+        // String teamobject;
+        // String teamobject = null;
 
-        // Create the vision portal the easy way.
-        if (USE_WEBCAM) {
+        /*
+         * This sample rate limits the reads solely to allow a user time to observe
+         * what is happening on the Driver Station telemetry.  Typical applications
+         * would not likely rate limit.
+         */
+        Deadline rateLimit = new Deadline(READ_PERIOD, TimeUnit.SECONDS);
+
+        /*
+         * Immediately expire so that the first time through we'll do the read.
+         */
+        rateLimit.expire();
+
+        /*
+         * Basic check to see if the device is alive and communicating.  This is not
+         * technically necessary here as the HuskyLens class does this in its
+         * doInitialization() method which is called when the device is pulled out of
+         * the hardware map.  However, sometimes it's unclear why a device reports as
+         * failing on initialization.  In the case of this device, it's because the
+         * call to knock() failed.
+         */
+        if (!huskyLens.knock()) {
+            telemetry.addData(">>", "Problem communicating with " + huskyLens.getDeviceName());
+        } else {
+            telemetry.addData(">>", "Press start to continue");
+        }
+    }
+    /*
+     * The device uses the concept of an algorithm to determine what types of
+     * objects it will look for and/or what mode it is in.  The algorithm may be
+     * selected using the scroll wheel on the device, or via software as shown in
+     * the call to selectAlgorithm().
+     *
+     * The SDK itself does not assume that the user wants a particular algorithm on
+     * startup, and hence does not set an algorithm.
+     *
+     * Users, should, in general, explicitly choose the algorithm they want to use
+     * within the OpMode by calling selectAlgorithm() and passing it one of the values
+     * found in the enumeration HuskyLens.Algorithm.
+
+     */
+
+
+
+    // Create the TensorFlow processor the easy way.
+    // tfod = TfodProcessor.easyCreateWithDefaults();
+
+    // Create the vision portal the easy way.
+    /*    if (USE_WEBCAM) {
             visionPortal = VisionPortal.easyCreateWithDefaults(
                 hardwareMap.get(WebcamName.class, "Webcam 1"), tfod);
         } else {
@@ -337,15 +387,83 @@ public class FTCWiresAutonomous extends LinearOpMode {
         // Set confidence threshold for TFOD recognitions, at any time.
         tfod.setMinResultConfidence(0.095f);
 
-    }   // end method initTfod()
+    }  */ // end method initTfod()
 
     /**
      * Add telemetry about TensorFlow Object Detection (TFOD) recognitions.
      */
-    private void runTfodTensorFlow() {
+    private void runHuskyLens() {
 
-        List<Recognition> currentRecognitions = tfod.getRecognitions();
-        telemetry.addData("# Objects Detected", currentRecognitions.size());
+        // huskyLens.selectAlgorithm(HuskyLens.Algorithm.OBJECT_RECOGNITION);
+        huskyLens.selectAlgorithm(HuskyLens.Algorithm.COLOR_RECOGNITION);
+
+        telemetry.update();
+
+
+        /*
+         * Looking for AprilTags per the call to selectAlgorithm() above.  A handy grid
+         * for testing may be found at https://wiki.dfrobot.com/HUSKYLENS_V1.0_SKU_SEN0305_SEN0336#target_20.
+         *
+         * Note again that the device only recognizes the 36h11 family of tags out of the box.
+         */
+        //  String teamobject = null;
+        //  if (!rateLimit.hasExpired()) {
+
+        //}
+        //  BufferedInputStream rateLimit = null;
+        //rateLimit.reset();
+
+        /*
+         * All algorithms, except for LINE_TRACKING, return a list of Blocks where a
+         * Block represents the outline of a recognized object along with its ID number.
+         * ID numbers allow you to identify what the device saw.  See the HuskyLens documentation
+         * referenced in the header comment above for more information on IDs and how to
+         * assign them to objects.
+         *
+         * Returns an empty array if no objects are seen.
+         */
+        int j = 0;
+        HuskyLens.Block[] blocks = huskyLens.blocks();
+
+        telemetry.addData("Block count", blocks.length);
+        if (blocks.length == 0) {
+            telemetry.addData("Block", blocks[j].toString());
+            teamobject[j] = blocks[j].toString();
+            //return teamobject;
+        } else {
+            for (int i = 0; i < blocks.length; i++) {
+                telemetry.addData("Block", blocks[i].toString());
+                teamobject[i] = blocks[i].toString();
+                telemetry.addData("Left Top Width Height", "%f %f, %f,%f", blocks[i].left,blocks[i].top,blocks[i].width,blocks[i].height );
+                telemetry.addData("Position","%f %f",blocks[i].x,blocks[i].y);
+                if (startPosition == START_POSITION.RED_LEFT || startPosition == START_POSITION.BLUE_LEFT) {
+                    if (blocks[i].toString() != null) {
+                        if (blocks[i].left < 200) {
+                            identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
+                        } else {
+                            identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.MIDDLE;
+                        }
+                    }
+                } else { //RED_RIGHT or BLUE_RIGHT
+                    if (blocks[i].toString()!=null) {
+                        if (blocks[i].left < 200) {
+                            identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.MIDDLE;
+                        } else {
+                            identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.RIGHT;
+                        }
+                    }
+                }
+                //return teamobject;
+            }
+
+        }
+
+        telemetry.update();
+        //return teamobject;
+
+        // return teamobject;
+
+//        telemetry.addData("# Objects Detected", currentRecognitions.size());
 
         //Camera placed between Left and Right Spike Mark on RED_LEFT and BLUE_LEFT If pixel not visible, assume Right spike Mark
         if (startPosition == START_POSITION.RED_LEFT || startPosition == START_POSITION.BLUE_LEFT) {
@@ -353,9 +471,9 @@ public class FTCWiresAutonomous extends LinearOpMode {
         } else { //RED_RIGHT or BLUE_RIGHT
             identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
         }
-
-            // Step through the list of recognitions and display info for each one.
-        for (Recognition recognition : currentRecognitions) {
+       //  int k=0;
+        // Step through the list of recognitions and display info for each one.
+      /*  for (Recognition recognition : teamobject[k]) {
             double x = (recognition.getLeft() + recognition.getRight()) / 2 ;
             double y = (recognition.getTop()  + recognition.getBottom()) / 2 ;
 
@@ -382,8 +500,10 @@ public class FTCWiresAutonomous extends LinearOpMode {
                 }
             }
 
-        }   // end for() loop
+        }   // end for() loop*/
 
     }   // end method runTfodTensorFlow()
 
+
 }   // end class
+
