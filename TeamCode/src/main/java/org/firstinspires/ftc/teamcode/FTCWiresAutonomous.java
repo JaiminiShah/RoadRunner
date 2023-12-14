@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * FTC WIRES Autonomous Example for only vision detection using tensorflow and park
  */
-@Autonomous(name = "FTC Wires Autonomous Mode", group = "00-Autonomous", preselectTeleOp = "FTC Wires TeleOp")
+@Autonomous(name = "FTCWiresAutonomous", group = "Autonomous")
 public class FTCWiresAutonomous extends LinearOpMode {
 
     private static final long READ_PERIOD =0 ;
