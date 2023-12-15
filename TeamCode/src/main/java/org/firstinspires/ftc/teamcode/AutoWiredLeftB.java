@@ -26,6 +26,7 @@ public class AutoWiredLeftB extends AutoLinearAbstract2022 {
     Graph graph;
     AstarPathFinder astar;
     HuskyLens huskyLens;
+   // HuskyLens.Block[] blocks = huskyLens.blocks();
     private final int READ_PERIOD = 1;
 
 
@@ -37,33 +38,35 @@ public class AutoWiredLeftB extends AutoLinearAbstract2022 {
 
     }
 
-    public void clawClose() {
+    public void claw1Open() {                //  drop  purple pixel
         clawLift1.setPosition(0.0 / 90.0);
-        clawLift2.setPosition(0.0 / 90.0);
+       // clawLift2.setPosition(0.0 / 90.0);
         wait(0.5);
     }
 
-    public void clawOpen() {
-        clawLift1.setPosition(5.0 / 90.0);
+    public void claw2Open() {              // drop yellow pixel
+        //clawLift1.setPosition(5.0 / 90.0);
         clawLift2.setPosition(5.0 / 90.0);
         wait(0.5);
     }
 
     public void armRaise() {
-        armLift1.setTargetPosition(2000);
-        armLift2.setTargetPosition(2000);
+        armLift1.setTargetPosition(500);
+        armLift2.setTargetPosition(500);
         armLift1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         armLift2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armLift1.setPower(0.4);
+        armLift2.setPower(0.4);
         wait(1.5);
     }
 
     public void armLower() {
-        armLift1.setTargetPosition(0);
-        armLift2.setTargetPosition(0);
+        armLift1.setTargetPosition(20);
+        armLift2.setTargetPosition(20);
         armLift1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         armLift2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        armLift1.setPower(-0.9);
-        armLift2.setPower(-0.9);
+        armLift1.setPower(0.4);
+        armLift2.setPower(0.4);
         wait(1.5);
     }
 
@@ -142,10 +145,10 @@ public class AutoWiredLeftB extends AutoLinearAbstract2022 {
         currentPos = dest;
     }
 
-    public String ScanHusky() {
+    public void ScanHusky() {
         huskyLens = hardwareMap.get(HuskyLens.class, "huskylens");
         // String teamobject;
-        String teamobject = null;
+        String teamobject[] = null;
 
         /*
          * This sample rate limits the reads solely to allow a user time to observe
@@ -186,7 +189,7 @@ public class AutoWiredLeftB extends AutoLinearAbstract2022 {
          * within the OpMode by calling selectAlgorithm() and passing it one of the values
          * found in the enumeration HuskyLens.Algorithm.
          */
-        huskyLens.selectAlgorithm(HuskyLens.Algorithm.OBJECT_RECOGNITION);
+        //huskyLens.selectAlgorithm(HuskyLens.Algorithm.OBJECT_RECOGNITION);
         huskyLens.selectAlgorithm(HuskyLens.Algorithm.COLOR_RECOGNITION);
 
         telemetry.update();
@@ -214,26 +217,39 @@ public class AutoWiredLeftB extends AutoLinearAbstract2022 {
          * Returns an empty array if no objects are seen.
          */
         int j = 0;
-        HuskyLens.Block[] blocks = huskyLens.blocks();
+       HuskyLens.Block[] blocks = huskyLens.blocks();
 
         telemetry.addData("Block count", blocks.length);
-        if (blocks.length == 0) {
-            telemetry.addData("Block", blocks[j].toString());
-            teamobject = blocks[j].toString();
+
+        for (int i = 0; i <= blocks.length; i++) {
+            telemetry.addData("Block", blocks[i].toString());
+            teamobject[i] = blocks[i].toString();
+            telemetry.addData("X=  Y=  LEFT= TOP=", "%f %f %f %f", blocks[i].x, blocks[i].y, blocks[i].left, blocks[i].top);
+
             //return teamobject;
-        } else {
-            for (int i = 0; i < blocks.length; i++) {
-                telemetry.addData("Block", blocks[i].toString());
-                teamobject = blocks[i].toString();
-                //return teamobject;
+        }
+    }
+     public void SelectPosition(){
+         HuskyLens.Block[] blocks = huskyLens.blocks();
+
+            for (int z=0;z<=blocks.length;z++){
+                if (blocks[z].x<= 160 && blocks[z].y<= 120) {
+                    driveTrain.RotateLeft(200, 25);
+                    claw1Open();
+                    break;
+                }
+                else if (blocks[z].x >=140 && blocks[z].y <=130)
+                   {
+                     claw1Open();
+                    }
+                else if (blocks[z].x>=160 && blocks[z].y >=120){
+                    driveTrain.RotateRight(200,25);
+                    claw1Open();
+                }
+
             }
 
-        }
 
-        telemetry.update();
-        //return teamobject;
-
-        return teamobject;
 
     }
 
@@ -341,13 +357,16 @@ public class AutoWiredLeftB extends AutoLinearAbstract2022 {
         clawLift1 = hardwareMap.get(Servo.class, "clawLift1");
         clawLift2=hardwareMap.get(Servo.class,"clawLift2");
 
+         ScanHusky();
         //Pickup and drop cone
 
         moveTo("B4");
         wait(2.0);
-        driveTrain.RotateLeft(12,25);
+        SelectPosition();
+
+        //driveTrain.RotateLeft(12,25);
         wait(2.0);
-        moveTo("pixelDrop");
+       // moveTo("pixelDrop");
         //if (false) {
 
         //Lift the arm

@@ -438,7 +438,7 @@ public class FTCWiresAutonomous extends LinearOpMode {
                 telemetry.addData("Position","%f %f",blocks[i].x,blocks[i].y);
                 if (startPosition == START_POSITION.RED_LEFT || startPosition == START_POSITION.BLUE_LEFT) {
                     if (blocks[i].toString() != null) {
-                        if (blocks[i].left < 200) {
+                        if (blocks[i].x <130 && blocks[i].y <100 ) {
                             identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.LEFT;
                         } else {
                             identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.MIDDLE;
@@ -446,7 +446,7 @@ public class FTCWiresAutonomous extends LinearOpMode {
                     }
                 } else { //RED_RIGHT or BLUE_RIGHT
                     if (blocks[i].toString()!=null) {
-                        if (blocks[i].left < 200) {
+                        if (blocks[i].x < 130 && blocks[i].y<100) {
                             identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.MIDDLE;
                         } else {
                             identifiedSpikeMarkLocation = IDENTIFIED_SPIKE_MARK_LOCATION.RIGHT;
